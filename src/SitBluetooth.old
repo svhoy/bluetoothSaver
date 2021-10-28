@@ -1,0 +1,64 @@
+import time
+import sys
+
+from gattlib import DiscoveryService, GATTRequester, GATTResponse
+
+class SitBluetooh:
+    def __init__(self, deviceName = "DWM1001") -> None:
+        self._devices = None
+        self._mac_address = ''
+        self._deviceName = deviceName
+
+        self.scan()
+
+        self._requester = GATTRequester(self._mac_address, False)
+        self._response = GATTResponse()
+
+        self.connect()
+
+        #uuid 00002a19-0000-1000-8000-00805f9b34fb
+        self.request_data()
+        for i in range(15):
+            self.wait_response()
+
+    def __del__(self):
+        self.disconnect()
+
+    def scan(self):
+        service = DiscoveryService("hci0")
+        self._devices = service.discover(2)
+
+        for address, name in self._devices.items():
+            if name == self._deviceName:
+                self._mac_address = address
+    
+    def disconnect(self): 
+        self._requester.disconnect()
+
+    def connect(self):
+        self._requester.connect(True, channel_type="random")
+
+    def show_characteristic(self):
+        print("Discover Characteristic...")
+        characteristic = self._requester.discover_characteristics()
+        for char in characteristic:
+            print(char)
+
+    def request_data(self):
+        self._requester.read_by_handle_async(0x0012, self._response)
+
+    def check_status(self):
+        return self._requester.is_connected()
+
+    def wait_response(self):
+        self._requester.read_by_handle_async(0x0012, self._response)
+        while not self._response.received():
+            time.sleep(1)
+            print("Test")
+
+        data = self._response.received()[0]
+        print("Test 2: {}".format(int.from_bytes(data, "little")))
+        time.sleep(1)
+
+    def getDevices(self): 
+        return self._devices
