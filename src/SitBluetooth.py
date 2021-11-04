@@ -1,4 +1,5 @@
 import asyncio
+import struct
 from bleak import BleakClient, discover
 
 class SitBluetooth:
@@ -6,12 +7,10 @@ class SitBluetooth:
     client: BleakClient = None
 
     def __init__(
-        self, 
-        loop: asyncio.AbstractEventLoop,
+        self,
         device: str ="DWM1001",
     ) -> None:
         self._deviceName = device
-        self.loop = loop
         self._isConnected = False
         self._connected_device = None
 
@@ -22,18 +21,17 @@ class SitBluetooth:
                 await self.connectDevice()
             else:
                 await self.searchDevice()
-                await asyncio.sleep(15.0, loop=self.loop)  
+                await asyncio.sleep(15.0)  
 
     async def searchDevice(self):
         devices = await discover()
-        
+
         for device in devices:
             if device.name == self._deviceName:
                 print("{}: {}".format(device.name, device.address))
                 print("UUIDs: {}".format(device.metadata["uuids"]))
-                print("RSSI: {}".format(device.rssi))
                 self._connected_device = device
-                self.client = BleakClient(self._connected_device.address, loop=self.loop)
+                self.client = BleakClient(self._connected_device.address)
 
     async def connectDevice(self):
         if self._isConnected:
@@ -43,30 +41,45 @@ class SitBluetooth:
             self._isConnected = await self.client.is_connected()
             if self._isConnected:
                 print(f"Connected to {self._connected_device.name}")
+                for service in self.client.services:
+                    print("Services: {}".format(service))
+                    for char in service.characteristics:
+                        print("Char: {}".format(char))
                 self.client.set_disconnected_callback(self.on_disconnect)
                 while True:
                     if not self._isConnected:
                         break
-                    await asyncio.sleep(5.0, loop=self.loop)
+                    await asyncio.sleep(5.0)
         except Exception as e:
             print("Exeption: {}".format(e))
+            self._connected_device = None
+            self.client = None
 
-    def on_disconnect(self, client: BleakClient):
-        self._isConnected = False
-        self.client = None
-        # Put code here to handle what happens on disconnet.
-        print(f"Disconnected from {self._connected_device.name}!")
-        self._connected_device = None
-
-    async def cleanup(self):
+    async def cleanup(self): 
         await self.disconnectDevice()
-
-    def isConnected(self):
-        return self._isConnected
 
     async def disconnectDevice(self):
         await self.client.disconnect()
         self._isConnected = False
 
+    async def read_char(self):
+        test = await self.client.read_gatt_char('6ba1de6b-3ab6-4d77-9ea1-cb6422720001') #BAS Char UUID 00002a19-0000-1000-8000-00805f9b34fb
+        print("TEST {}".format(int.from_bytes(test, byteorder='big')))
+    
+    async def getNotification(self):
+        await self.client.start_notify('6ba1de6b-3ab6-4d77-9ea1-cb6422720001', self.on_notification)
+
+    def on_notification(self, sender: int, data: bytearray):
+        distance = struct.unpack('f', data)
+        print('From Handle {} Distance: {}'.format(sender, distance[0]))
+
+    def on_disconnect(self, client: BleakClient):
+        print(f"Disconnected from {self._connected_device.name}!")
+        self._connected_device = None
+        self._isConnected = False
+
+    def isConnected(self):
+        return self._isConnected
+
     def getDeviceName(self):
-        return self._deviceName
+        return self._deviceName 
