@@ -2,6 +2,9 @@ import asyncio
 import struct
 from bleak import BleakClient, discover
 
+from . import database
+from .models import DataStorage
+
 class SitBluetooth:
 
     client: BleakClient = None
@@ -14,8 +17,9 @@ class SitBluetooth:
         self._isConnected = False
         self._connected_device = None
 
-    async def manager(self):
+    async def manager(self, test_id):
         print("Starting connection manager.")
+        self._test_id = test_id
         while True:
             if self.client:
                 await self.connectDevice()
@@ -69,9 +73,14 @@ class SitBluetooth:
     async def getNotification(self):
         await self.client.start_notify('6ba1de6b-3ab6-4d77-9ea1-cb6422720001', self.on_notification)
 
-    def on_notification(self, sender: int, data: bytearray):
+    async def on_notification(self, sender: int, data: bytearray):
         distance = struct.unpack('f', data)
         print('From Handle {} Distance: {}'.format(sender, distance[0]))
+        await self.save_distance(distance[0])
+        
+
+    async def save_distance(self, distance):
+        await database.repository.add_data(DataStorage(test_id=self._test_id, distance=distance))
 
     def on_disconnect(self, client: BleakClient):
         print(f"Disconnected from {self._connected_device.name}!")

@@ -1,7 +1,13 @@
 """This is the main script"""
 import asyncio
 import time
-from SitBluetooth import SitBluetooth
+
+from . import database
+from .settings import settings
+from .models import Test
+from .sitBluetooth import SitBluetooth
+
+device = SitBluetooth()
 
 async def main():
     enable_notify = False
@@ -12,15 +18,25 @@ async def main():
 
         await asyncio.sleep(1)
 
-if __name__ == "__main__":
+async def db_test_init():
+    print ("Please insert Test Name: ")
+    string = str(input())
+    test = await database.repository.add_test(Test(name=string))
+    return test.id
+
+
+def start():
+    print(settings.database_url)
+    database.create_db_and_tables()
+
     # Create the event loop.
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    device = SitBluetooth()
+    test_id = loop.run_until_complete(db_test_init())
     try:
         #TODO ensure_future is deprecated find other solution
-        asyncio.ensure_future(device.manager())
+        asyncio.ensure_future(device.manager(test_id))
         asyncio.ensure_future(main())
         loop.run_forever()
     except KeyboardInterrupt:

@@ -1,5 +1,8 @@
 .vscode
+.env
 
 __pycache__
 
 sit
+
+src/SitBluetooth.py.old
