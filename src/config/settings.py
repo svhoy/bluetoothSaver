@@ -5,7 +5,7 @@ from pathlib import Path
 from pydantic import BaseSettings, Field
 
 
-ROOT_DIR = Path(__file__).resolve(strict=True).parent.parent
+ROOT_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 
 
 class Settings(BaseSettings):
@@ -19,9 +19,8 @@ class Settings(BaseSettings):
     project_root: Path = ROOT_DIR
     default_expire_minutes: int = 15
 
-
     class Config:
-        env_file = ROOT_DIR / ".env"
+        env_file = ROOT_DIR / "src/config/.env"
 
 
 settings = Settings()

@@ -2,24 +2,27 @@
 import asyncio
 import time
 
-from . import database
-from .settings import settings
-from .models import Test
-from .sitBluetooth import SitBluetooth
+from .bluetooth.bluetooth import SitBluetooth
+from .config.settings import settings
+from .data import database
+from .data.models import Test
+
 
 device = SitBluetooth()
 
+
 async def main():
     enable_notify = False
-    while(1):
-        if(device.isConnected() and not enable_notify):
+    while 1:
+        if device.isConnected() and not enable_notify:
             await device.getNotification()
             enable_notify = True
 
         await asyncio.sleep(1)
 
+
 async def db_test_init():
-    print ("Please insert Test Name: ")
+    print("Please insert Test Name: ")
     string = str(input())
     test = await database.repository.add_test(Test(name=string))
     return test.id
@@ -35,7 +38,7 @@ def start():
 
     test_id = loop.run_until_complete(db_test_init())
     try:
-        #TODO ensure_future is deprecated find other solution
+        # TODO ensure_future is deprecated find other solution
         asyncio.ensure_future(device.manager(test_id))
         asyncio.ensure_future(main())
         loop.run_forever()
