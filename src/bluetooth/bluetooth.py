@@ -12,7 +12,7 @@ class SitBluetooth:
 
     def __init__(
         self,
-        device: str = "DWM3001 Blue",
+        device: str = "DWM3001 Blue2",
     ) -> None:
         self._deviceName = device
         self._isConnected = False
@@ -33,6 +33,7 @@ class SitBluetooth:
         devices = await _scanner.discover(timeout=10.0)
 
         for device in devices:
+            print(device.name)
             if device.name == self._deviceName:
                 print("{}: {}".format(device.name, device.address))
                 print("UUIDs: {}".format(device.metadata["uuids"]))
